@@ -2,7 +2,7 @@ import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
 import {InjectModel} from "@nestjs/mongoose";
 import {Auth, LoginInfo} from "./schemas";
 import {Model} from "mongoose";
-import {LoginDto, RegisterDto, TokenPayloadDto} from "./dto";
+import {LoginDto, RefTokenDto, RegisterDto, TokenPayloadDto} from "./dto";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
 import * as process from "node:process";
@@ -94,10 +94,10 @@ export class AuthService {
         }
     }
 
-    async refreshTokens(refreshToken: string): Promise<ResponseDto> {
+    async refreshTokens(refreshToken: RefTokenDto): Promise<ResponseDto> {
 
         const findLoginInfo = await this.loginInfoModel.findOne({
-            token: refreshToken,
+            token: refreshToken.refreshToken,
         });
         if (!findLoginInfo) {
             throw new HttpException({data: null,message: "Invalid refresh token", error: true}, HttpStatus.NOT_ACCEPTABLE);
@@ -105,7 +105,7 @@ export class AuthService {
 
         const decodeToken: TokenPayloadDto = await new Promise<TokenPayloadDto>((resolve, reject) => {
             const secret: string | undefined = process.env.REFRESH_TOKEN_SECRET;
-            jwt.verify(refreshToken, secret!, (err, decoded: TokenPayloadDto) => {
+            jwt.verify(refreshToken.refreshToken, secret!, (err, decoded: TokenPayloadDto) => {
                 if (err) {
                     reject(err);
                 }
@@ -124,7 +124,7 @@ export class AuthService {
         return {
             data: {
                 accessToken,
-                refreshToken
+                refreshToken: refreshToken.refreshToken
             },
             message: "Token refresh successful",
             error: false
